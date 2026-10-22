@@ -70,6 +70,10 @@
   .sponsor .tools { position: absolute; right: 2px; bottom: 2px; display: flex; gap: 2px; }
   .sponsor .tools button { padding: 0 6px; font-size: 12px; line-height: 18px; }
   [hidden] { display: none !important; }
+  .logo-box { flex: 0 0 200px; height: 156px; display: grid; place-items: center; background: #111 linear-gradient(#1b1b1f, #0c0c0e);
+              border: 2px dashed var(--line); border-radius: 8px; padding: 10px; cursor: pointer; }
+  .logo-box.over { border-color: var(--accent); }
+  .logo-box img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 
   /* The crews: each side's stocks, big, with - and +. */
   .crews { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -176,6 +180,18 @@
       </ol>
     </details>
   </section>
+  <section data-page="tournament">
+    <h2>Tournament logo</h2>
+    <div class="row" style="align-items:center">
+      <div class="logo-box" id="logo-box"><img id="logo-img" alt=""></div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+        <button id="logo-pick">Choose a logo…</button>
+        <button id="logo-clear">Use the Smash Class logo</button>
+      </div>
+    </div>
+    <input type="file" id="logo-file" accept="image/*" hidden>
+    <p class="note">In the middle of the scoreboard. Drop a logo on the box, or choose one. GFX Engine's Use Global Information brings its tournament logo too.</p>
+  </section>
   <section class="wide" data-page="tournament">
     <h2>Sponsors</h2>
     <div class="drop" id="sponsor-drop">Drop sponsor logos here, or click to choose (shown in the box at the bottom, in turn)</div>
@@ -206,7 +222,7 @@
   </section>
 </aside>
 </div>
-<script>window.SHELL = {"app": "Smash HUD", "logo": "assets/app_icon.png", "pages": [{"id": "crews", "label": "Crew Battle", "icon": "live"}, {"id": "overview", "label": "Overview"}, {"id": "teams", "label": "Crews", "group": "Event setup"}, {"id": "tournament", "label": "Sponsors", "icon": "sponsors", "group": "Event setup"}, {"id": "reader", "label": "Stock Reader", "icon": "cams", "group": "Live game"}, {"id": "engine", "label": "GFX Engine", "icon": "engine", "group": "Connections"}]};</script>
+<script>window.SHELL = {"app": "Smash HUD", "logo": "assets/app_icon.png", "pages": [{"id": "crews", "label": "Crew Battle", "icon": "live"}, {"id": "overview", "label": "Overview"}, {"id": "teams", "label": "Crews", "group": "Event setup"}, {"id": "tournament", "label": "Logo & Sponsors", "icon": "sponsors", "group": "Event setup"}, {"id": "reader", "label": "Stock Reader", "icon": "cams", "group": "Live game"}, {"id": "engine", "label": "GFX Engine", "icon": "engine", "group": "Connections"}]};</script>
 <script src="enginelink.js"></script>
 <script src="shell.js"></script>
 <script src="update.js"></script>
@@ -320,6 +336,10 @@ function apply(s) {
       config({ sponsors: list });
     };
   }
+  // The tournament logo.
+  const logo = sb.logo || "assets/logo.png";
+  if ($("logo-img").getAttribute("src") !== logo) $("logo-img").src = logo;
+  $("logo-clear").disabled = !cfg.tournament_logo;
   // Outputs.
   $("url-local").textContent = `http://localhost:${app.port}/scoreboard`;
   $("lan-box").hidden = !app.lan_url;
@@ -433,6 +453,13 @@ $("show-sponsors").onchange = e => config({ show: { sponsors: e.target.checked }
 $("network").onchange = e => post("/api/network", { on: e.target.checked });
 for (const b of document.querySelectorAll("[data-copy]")) b.onclick = () => navigator.clipboard.writeText($(b.dataset.copy).textContent);
 function readFile(file) { return new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); }); }
+async function setLogo(file) { if (file) post("/api/logo", { name: file.name, data: await readFile(file) }); }
+$("logo-pick").onclick = $("logo-box").onclick = () => $("logo-file").click();
+$("logo-file").onchange = e => { setLogo(e.target.files[0]); e.target.value = ""; };
+$("logo-clear").onclick = () => post("/api/logo", {});
+$("logo-box").ondragover = e => { e.preventDefault(); $("logo-box").classList.add("over"); };
+$("logo-box").ondragleave = () => $("logo-box").classList.remove("over");
+$("logo-box").ondrop = e => { e.preventDefault(); $("logo-box").classList.remove("over"); setLogo(e.dataTransfer.files[0]); };
 async function addSponsors(files) { for (const f of files) await post("/api/sponsor", { name: f.name, data: await readFile(f) }); }
 $("sponsor-drop").onclick = () => $("sponsor-file").click();
 $("sponsor-file").onchange = e => { addSponsors([...e.target.files]); e.target.value = ""; };

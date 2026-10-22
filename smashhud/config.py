@@ -14,6 +14,7 @@ RESOURCE_DIR = getattr(sys, "_MEIPASS", ROOT) if FROZEN else ROOT
 DATA_DIR = os.path.dirname(os.path.abspath(sys.executable)) if FROZEN else ROOT
 WEB_DIR = os.path.join(RESOURCE_DIR, "web")
 SPONSOR_DIR = os.path.join(DATA_DIR, "sponsors")   # uploaded sponsor logos (served as sponsors/...)
+LOGO_DIR = os.path.join(DATA_DIR, "logos")         # uploaded tournament logos (served as logos/...)
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
 
 DEFAULTS = {
@@ -32,6 +33,8 @@ DEFAULTS = {
     "crews": {"stocks": 12, "left": 12, "right": 12, "per_game": 3},
     "best_of": 3,
     "match": "Grand Finals",
+    # The logo in the middle of the scoreboard ("logos/x.png"); none shows the Smash Class logo.
+    "tournament_logo": "",
     # Sponsor logos in the box at the bottom, in turn, each for this many seconds.
     "sponsors": [],
     "sponsor_seconds": 8,
@@ -89,11 +92,11 @@ class Config:
 
 
 def web_file(rel):
-    """Path on disk for a URL path: uploaded sponsors (sponsors/...), else the
-    web folder. Paths that climb out are refused."""
+    """Path on disk for a URL path: uploaded sponsors (sponsors/...) and
+    tournament logos (logos/...), else the web folder. Paths that climb out are refused."""
     rel = rel.replace("\\", "/").lstrip("/")
     base = WEB_DIR
-    for prefix, folder in (("sponsors/", SPONSOR_DIR),):
+    for prefix, folder in (("sponsors/", SPONSOR_DIR), ("logos/", LOGO_DIR)):
         if rel.startswith(prefix):
             base, rel = folder, rel[len(prefix):]
     path = os.path.normpath(os.path.join(base, rel))

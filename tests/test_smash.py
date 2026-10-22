@@ -190,6 +190,15 @@ class AppTest(unittest.TestCase):
         self.app.on_reader([("lost", "left", 20)])
         self.assertEqual(self.app.scoreboard()["left"]["stocks"], 0)
 
+    def test_tournament_logo(self):
+        import base64
+        png = base64.b64encode(open(os.path.join(os.path.dirname(__file__), "..", "web", "assets", "app_icon.png"), "rb").read()).decode()
+        s = self.post("/api/logo", {"name": "My Cup.png", "data": "data:image/png;base64," + png})
+        self.assertEqual(s["scoreboard"]["logo"], "logos/My Cup.png")
+        self.assertTrue(self.get("/logos/My%20Cup.png"))
+        s = self.post("/api/logo", {})
+        self.assertEqual(s["scoreboard"]["logo"], "assets/logo.png")
+
     def test_reader_box(self):
         s = self.post("/api/reader/box", {"side": "left", "box": [0.5, 0.9, 0.3, 0.95]})
         self.assertEqual(s["config"]["reader"]["boxes"]["left"], [0.3, 0.9, 0.5, 0.95])

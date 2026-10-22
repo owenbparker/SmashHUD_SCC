@@ -16,9 +16,9 @@ original, in hud-link/). A HUD makes one EngineLink with:
                   adds to its graphics (e.g. VALORANT's agent select)}
     apply_global(g, fetch) -> a short summary of what changed: takes the
                   engine's global configuration (g["left"]["name"], "short",
-                  "logo_url", "color"..., g["sponsors"]: [{"logo_url", "secs",
-                  "white"}]); fetch(url) -> bytes for the logos (see
-                  save_sponsors())
+                  "logo_url", "color"..., g["tournament_logo_url"],
+                  g["sponsors"]: [{"logo_url", "secs", "white"}]); fetch(url)
+                  -> bytes for the logos (see save_sponsors())
     load() / save(dict)   where the chosen engine is remembered
 
 and serves its routes (see handle()). While connected it sends the snapshot

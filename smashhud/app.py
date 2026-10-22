@@ -15,9 +15,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 from . import capture
-from .config import DATA_DIR, SPONSOR_DIR, web_file
+from .config import DATA_DIR, LOGO_DIR, SPONSOR_DIR, web_file
 from .crews import SIDES
-from .enginelink import EngineLink, save_sponsors
+from .enginelink import EngineLink, save_logo_bytes, save_sponsors
 from .log import log, since
 from .reader import StockReader
 from .updater import Updater, clean_up_old_update
@@ -156,6 +156,7 @@ class HudApp:
     def scoreboard(self):
         cfg = self.config.get()
         out = {"match": cfg["match"], "best_of": int(cfg["best_of"]), "sponsors": cfg["sponsors"],
+               "logo": cfg["tournament_logo"] or "assets/logo.png",
                "sponsor_seconds": cfg["sponsor_seconds"], "show": cfg["show"], "stocks": cfg["crews"]["stocks"]}
         for side in SIDES:
             t = cfg[side]
@@ -211,6 +212,13 @@ class HudApp:
                 changes[side] = team
                 done.append(f"{side}: {team.get('name') or team.get('short')}"
                             + (f" ({len(team['players'])} players)" if team.get("players") else ""))
+        if g.get("tournament_logo_url"):
+            try:
+                name = save_logo_bytes(LOGO_DIR, "engine-tournament", fetch(g["tournament_logo_url"]))
+                changes["tournament_logo"] = f"logos/{name}"
+                done.append("tournament logo")
+            except Exception as e:
+                log(f"Couldn't fetch the tournament logo from the GFX Engine: {e}", "warn")
         sponsors, secs = save_sponsors(g, fetch, SPONSOR_DIR, "sponsors/", log)
         if sponsors:
             changes["sponsors"] = sponsors
@@ -222,7 +230,7 @@ class HudApp:
         if g.get("stage"):
             changes["match"] = g["stage"]
         if not done:
-            raise ValueError("The engine's Global configuration has no team names or sponsors yet")
+            raise ValueError("The engine's Global configuration has no team names, tournament logo or sponsors yet")
         self.config.update(changes)
         self.changed()
         return ", ".join(done)
@@ -434,6 +442,10 @@ def make_handler(app):
                     app.set_demo(bool(body.get("on")))
                 elif path == "/api/network":
                     app.set_network(bool(body.get("on")))
+                elif path == "/api/logo":
+                    logo = save_upload(LOGO_DIR, "logos/", body.get("name"), body.get("data")) if body.get("data") else ""
+                    app.config.update({"tournament_logo": logo})
+                    app.changed()
                 elif path == "/api/sponsor":
                     sponsor = save_upload(SPONSOR_DIR, "sponsors/", body.get("name"), body.get("data"))
                     app.config.update({"sponsors": app.config.get()["sponsors"] + [sponsor]})

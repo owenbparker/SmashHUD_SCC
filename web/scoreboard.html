@@ -19,7 +19,7 @@
   .board.in { transform: none; }
   .abs { position: absolute; white-space: nowrap; }
   #bg { left: 286px; top: 0; width: 1350px; height: 127px; }
-  #logo { left: 880px; top: 1px; width: 162px; height: 127px; z-index: 3; }
+  #logo { left: 880px; top: 1px; width: 162px; height: 127px; z-index: 3; object-fit: contain; }
   .score { top: 0; width: 88px; height: 74px; display: grid; place-items: center; font: 62.5px/1 "Anton", sans-serif;
            color: #000; z-index: 2; padding-top: 1px; box-sizing: border-box; }
   .score span { display: inline-block; }
@@ -102,6 +102,7 @@ function render(s) {
     score(side, s);
     fit($(`name-${side}`), s[side].name);
   }
+  if (s.logo && $("logo").getAttribute("src") !== s.logo) $("logo").src = s.logo;
   fit($("match"), s.match || "");
   fit($("bestof"), `Best of ${s.best_of}`);
   pips(s.best_of, s);
