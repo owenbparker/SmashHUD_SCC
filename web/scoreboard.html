@@ -59,19 +59,33 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-// How wide each text may grow before it's squeezed to fit.
-const ROOM = { "name-left": 470, "name-right": 470, match: 190, bestof: 200 };
+// Texts squeeze to fit between the score boxes, the logo and the game boxes
+// (which move as the logo is sized and the series is longer).
 const SIZES = {};
 let last = null, flash = { left: null, right: null };
 
-function fit(el, text) {
-  if (el.dataset.text === text) return;
-  el.dataset.text = text;
+function fit(el, text, room, force) {
+  const key = text + "|" + Math.round(room);
+  if (el.dataset.key === key && !force) return;
+  el.dataset.key = key;
   el.textContent = text;
   const size = SIZES[el.id] || (SIZES[el.id] = parseFloat(getComputedStyle(el).fontSize));
   el.style.fontSize = size + "px";
   const w = el.scrollWidth;
-  if (w > ROOM[el.id]) el.style.fontSize = (size * ROOM[el.id] / w) + "px";
+  if (w > room) el.style.fontSize = (size * room / w) + "px";
+}
+
+// Where the logo is (its box scaled from its middle), and how far the game boxes reach.
+function layout(s) {
+  const scale = (+s.logo_size || 100) / 100, gap = 14;
+  const logoL = 961 - 81 * scale, logoR = 961 + 81 * scale;
+  const n = Math.max(1, Math.ceil(s.best_of / 2));
+  const pipsL = 600 + 38 * (n - 1) + 31, pipsR = 1289 - 38 * (n - 1);
+  const matchRight = Math.min(877, logoL - 4), bestLeft = Math.max(1044, logoR + 4);
+  $("match").style.right = (1920 - matchRight) + "px";
+  $("bestof").style.left = bestLeft + "px";
+  return { "name-left": logoL - 391 - gap, "name-right": 1530 - logoR - gap,
+           match: matchRight - pipsL - gap, bestof: pipsR - bestLeft - gap };
 }
 
 function pips(bestOf, s) {
@@ -96,16 +110,19 @@ function score(side, s) {
   flash[side] = s[side].flash;
 }
 
+function fitAll(s, force) {
+  const room = layout(s);
+  for (const side of ["left", "right"]) fit($(`name-${side}`), s[side].name, room[`name-${side}`], force);
+  fit($("match"), s.match || "", room.match, force);
+  fit($("bestof"), `Best of ${s.best_of}`, room.bestof, force);
+}
+
 function render(s) {
   last = s;
-  for (const side of ["left", "right"]) {
-    score(side, s);
-    fit($(`name-${side}`), s[side].name);
-  }
+  for (const side of ["left", "right"]) score(side, s);
+  fitAll(s);
   if (s.logo && $("logo").getAttribute("src") !== s.logo) $("logo").src = s.logo;
   $("logo").style.transform = `translateY(${+s.logo_y || 0}px) scale(${(+s.logo_size || 100) / 100})`;
-  fit($("match"), s.match || "");
-  fit($("bestof"), `Best of ${s.best_of}`);
   pips(s.best_of, s);
   sponsors(s);
   $("board").classList.add("in");
@@ -136,6 +153,8 @@ function connect() {
   es.onmessage = e => { try { render(JSON.parse(e.data)); } catch (err) {} };
 }
 document.fonts.ready.then(connect);
+// (a font that arrives later, Brick from the PC say, is wider or narrower: fit again)
+document.fonts.addEventListener("loadingdone", () => last && fitAll(last, true));
 </script>
 </body>
 </html>
