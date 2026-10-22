@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="assets/app_icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smash HUD Control</title>
+<style>
+  @font-face { font-family: "Inter"; src: url("fonts/Inter.ttf") format("truetype"); font-weight: 100 900; }
+  @font-face { font-family: "Anton"; src: url("fonts/Anton-Regular.ttf") format("truetype"); }
+  :root { --bg: #0e1012; --panel: #171a1d; --line: #2a2f34; --text: #e8eaed; --muted: #8b939b;
+          --left: #7200ff; --right: #7200ff; --accent: #8b3dff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Inter", system-ui, sans-serif; }
+  html, body { height: 100%; }
+  header { display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 18px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .version { font-size: 12px; color: var(--muted); }
+  .update.check { background: #252a2f; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+  .update.check:hover { filter: none; border-color: var(--muted); }
+  .update { background: var(--accent); color: #fff; border: 0; font-weight: 700; padding: 6px 12px; }
+  .update:hover { filter: brightness(1.1); }
+  .update[disabled] { background: #2c2a3a; color: var(--text); cursor: default; }
+  .update.error { background: #6b2a2a; color: #fff; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; padding: 6px 12px; color: var(--muted); }
+  .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 440px; height: calc(100% - 54px); }
+  .layout > main, .layout > aside { overflow-y: auto; }
+  aside { border-left: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .out { margin-bottom: 10px; }
+  .out > span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .out .row { align-items: stretch; }
+  .out code { display: flex; align-items: center; padding: 6px 8px; min-width: 0; }
+  .out button { flex: 0 0 auto; }
+  .toggle { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; margin: 6px 0 10px; cursor: pointer; }
+  .toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .log { height: 190px; overflow-y: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+         font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+  .log .t { color: var(--muted); margin-right: 6px; }
+  .log .warn { color: #ffcf66; }
+  .log .error { color: #ff7b7b; }
+  @media (max-width: 900px) { .layout { display: block; height: auto; } aside { border-left: 0; } }
+  header h1 { margin: 0; font-size: 16px; font-weight: 700; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #c0392b; }
+  .dot.on { background: #31c392; box-shadow: 0 0 8px #31c392; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; padding: 16px; align-content: start; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  label { display: block; margin: 10px 0 4px; color: var(--muted); font-size: 12px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+  textarea { resize: vertical; min-height: 120px; }
+  input[type=checkbox] { width: auto; }
+  button { padding: 8px 12px; background: #252a2f; color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; }
+  .preview { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #2b2a3d radial-gradient(ellipse at 50% 70%, #4b4470, #1c1a28); border-radius: 6px; overflow: hidden; }
+  .preview iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; }
+  code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; word-break: break-all; }
+  .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  .warn { color: #ffcf66; }
+  .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 18px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--text); }
+  .sponsor-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .sponsor { position: relative; width: 160px; height: 62px; background: #000 center/contain no-repeat; border: 1px solid var(--line); border-radius: 6px; }
+  .sponsor .n { position: absolute; left: 4px; top: 2px; font-size: 11px; color: var(--muted); }
+  .sponsor .tools { position: absolute; right: 2px; bottom: 2px; display: flex; gap: 2px; }
+  .sponsor .tools button { padding: 0 6px; font-size: 12px; line-height: 18px; }
+  [hidden] { display: none !important; }
+
+  /* The crews: each side's stocks, big, with - and +. */
+  .crews { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .crews { grid-template-columns: 1fr; } }
+  .crew { border-top: 4px solid var(--left); padding-top: 10px; }
+  .crew h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .stocks { display: grid; grid-template-columns: 64px 1fr 64px; gap: 10px; align-items: center; }
+  .stocks b { font: 76px/1 "Anton", sans-serif; text-align: center; background: #fff; color: #000; border-radius: 8px; padding: 8px 0 4px; }
+  .stocks button { height: 64px; font-size: 28px; font-weight: 700; }
+  .stocks .of { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 12px; }
+  .onstage { display: grid; grid-template-columns: 40px 1fr 40px; gap: 6px; align-items: center; margin-top: 4px; }
+  .onstage span { text-align: center; font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .onstage button { padding: 6px 0; }
+  .wins { display: flex; align-items: center; gap: 8px; }
+  .wins b { font-size: 22px; min-width: 28px; text-align: center; }
+  .wins button { flex: 0 0 40px; font-size: 18px; padding: 4px; }
+  .notice { background: #3b2f12; border: 1px solid #6b5420; color: #ffcf66; border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .notice span { flex: 1; }
+
+  /* The stock reader: the game's picture, with a box drawn around each crew's stocks. */
+  .read-btn { width: 100%; padding: 16px; font-size: 17px; font-weight: 700; border-radius: 8px; }
+  .read-btn.reading { background: #e3475a; border-color: #e3475a; color: #fff; }
+  .read-btn.reading::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%;
+                              background: #fff; vertical-align: 1px; animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 6px; overflow: hidden; cursor: crosshair; user-select: none; }
+  .frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+  .frame .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+  .box { position: absolute; border: 2px solid #31c392; background: rgba(49,195,146,.12); pointer-events: none; }
+  .box.right { border-color: #ffb02e; background: rgba(255,176,46,.12); }
+  .box span { position: absolute; left: 0; bottom: 100%; font-size: 11px; font-weight: 700; padding: 1px 5px; background: #31c392; color: #04140e; white-space: nowrap; }
+  .box.right span { background: #ffb02e; }
+  .box i { position: absolute; top: 0; bottom: 0; border-left: 1px dashed rgba(255,255,255,.6); }
+  .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .counts div { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .counts b { font-size: 20px; }
+  .counts canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 1; margin-bottom: 6px; border-radius: 4px; image-rendering: pixelated; }
+  /* (Crew Battle: the controls first, the preview under them) */
+  body[data-page=crews] main > section:has(.preview) { order: 2; }
+</style>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<header>
+  <img src="assets/app_icon.png" alt="" style="height:38px;margin-right:-4px">
+  <h1>Smash HUD</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
+  <div class="seg" id="mode" role="group" aria-label="Where the score comes from">
+    <button data-mode="live">Live</button><button data-mode="demo">Demo crew battle</button>
+  </div>
+  <div class="status" style="margin-left:auto">
+    <button id="update" class="update" hidden></button>
+    <span class="version" id="version"></span>
+  </div>
+</header>
+<div class="layout">
+<main>
+  <section class="wide" data-page="crews">
+    <h2>Crew battle</h2>
+    <div class="notice" id="notice" hidden><span></span><button id="notice-ok">OK</button></div>
+    <div class="crews" id="crews"></div>
+    <div class="row" style="margin-top:16px;flex-wrap:wrap">
+      <div style="flex:0 0 150px"><label>Stocks per crew</label><input id="total" type="number" min="1" max="99"></div>
+      <div style="flex:0 0 150px"><label>Stocks per game</label>
+        <select id="per-game"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+      <div style="flex:0 0 auto;align-self:flex-end"><button id="reset" class="primary">New crew battle</button></div>
+    </div>
+    <p class="note">New crew battle fills both crews' stocks and puts each crew's first player on stage. The stock reader counts each stock a crew loses; − and + fix the count by hand.</p>
+  </section>
+  <section data-page="crews">
+    <h2>Match</h2>
+    <label>Match (beside the logo)</label><input id="match" spellcheck="false">
+    <label>Series</label>
+    <select id="best-of"><option value="1">Best of 1</option><option value="3">Best of 3</option><option value="5">Best of 5</option>
+      <option value="7">Best of 7</option></select>
+  </section>
+  <section data-page="teams" class="wide">
+    <h2>Crews</h2>
+    <div class="crews" id="rosters"></div>
+    <p class="note">One player per line, in the order they play. The scoreboard shows the player on stage (or the crew's name while there are no players), and the next one comes up when the stock reader sees a player knocked out.</p>
+  </section>
+  <section class="wide" data-page="reader">
+    <h2>Stock reader</h2>
+    <button id="reader" class="read-btn">Read the game</button>
+    <div class="note" id="reader-status" style="margin:8px 0 10px"></div>
+    <div class="row" style="flex-wrap:wrap">
+      <div style="flex:0 0 200px"><label>Picture from</label>
+        <select id="src-kind"><option value="device">Capture card / virtual camera</option><option value="window">A window</option><option value="screen">A screen</option></select></div>
+      <div style="flex:1;min-width:220px"><label>&nbsp;</label><select id="src-pick"></select></div>
+      <div style="flex:0 0 auto;align-self:flex-end"><button id="src-refresh" title="Look again for capture devices, windows and screens">↻</button></div>
+    </div>
+    <div class="row" style="margin:14px 0 8px;flex-wrap:wrap">
+      <button id="grab" style="flex:0 0 auto">Get the picture</button>
+      <div class="seg" id="draw-side"><button data-side="left" class="on">Draw left crew's stocks</button><button data-side="right">Draw right crew's stocks</button></div>
+    </div>
+    <div class="frame" id="frame"><img id="frame-img" alt=""><div class="empty" id="frame-empty">Pick where the game comes from, then Get the picture.</div></div>
+    <div class="counts" id="counts"></div>
+    <details class="note" style="margin-top:10px" open>
+      <summary>Setting it up</summary>
+      <ol style="margin:6px 0 0;padding-left:18px">
+        <li>Pick the game's picture: the capture card, or, if vMix or OBS already uses it, their virtual camera (vMix External output, OBS Virtual Camera) or a projector window.</li>
+        <li>At the start of a game (full stocks), <b>Get the picture</b>, then drag a box tightly around the left crew's player's stock icons (the little character heads under their %), and the right crew's.</li>
+        <li>Turn on <b>Read the game</b>. Each stock a crew loses comes off its score. A player who carries stocks into the next game and self-destructs down to them isn't counted twice.</li>
+      </ol>
+    </details>
+  </section>
+  <section class="wide" data-page="tournament">
+    <h2>Sponsors</h2>
+    <div class="drop" id="sponsor-drop">Drop sponsor logos here, or click to choose (shown in the box at the bottom, in turn)</div>
+    <input type="file" id="sponsor-file" accept="image/*" multiple hidden>
+    <div class="sponsor-list" id="sponsors"></div>
+    <div class="row" style="margin-top:6px">
+      <div style="flex:0 0 160px"><label>Seconds each</label><input id="sponsor-seconds" type="number" min="2" max="60"></div>
+      <label class="toggle" style="align-self:flex-end"><input type="checkbox" id="show-sponsors"> Show the sponsor box</label>
+    </div>
+  </section>
+</main>
+<aside>
+  <section data-page="overview crews">
+    <h2>Preview</h2>
+    <div class="preview" id="preview"><iframe src="/scoreboard" title="Scoreboard preview"></iframe></div>
+  </section>
+  <section data-page="overview">
+    <h2>Outputs</h2>
+    <div class="out"><span>Crews scoreboard (OBS / vMix browser source, 1920×1080)</span>
+      <div class="row"><code id="url-local"></code><button data-copy="url-local">Copy</button></div></div>
+    <div class="out" id="lan-box" hidden><span>From another PC</span>
+      <div class="row"><code id="url-lan"></code><button data-copy="url-lan">Copy</button></div></div>
+    <label class="toggle"><input type="checkbox" id="network"> Let other PCs on the network read the HUD</label>
+  </section>
+  <section data-page="overview">
+    <h2>Log</h2>
+    <div class="log" id="log"></div>
+  </section>
+</aside>
+</div>
+<script>window.SHELL = {"app": "Smash HUD", "logo": "assets/app_icon.png", "pages": [{"id": "crews", "label": "Crew Battle", "icon": "live"}, {"id": "overview", "label": "Overview"}, {"id": "teams", "label": "Crews", "group": "Event setup"}, {"id": "tournament", "label": "Sponsors", "icon": "sponsors", "group": "Event setup"}, {"id": "reader", "label": "Stock Reader", "icon": "cams", "group": "Live game"}, {"id": "engine", "label": "GFX Engine", "icon": "engine", "group": "Connections"}]};</script>
+<script src="enginelink.js"></script>
+<script src="shell.js"></script>
+<script src="update.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const showUpdate = updateButton($("update"), $("version"));
+const SIDES = ["left", "right"];
+let state = null, logAfter = 0, sources = null;
+
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  const data = await r.json();
+  if (data.error) { alert(data.error); return null; }
+  if (data.config) apply(data);
+  return data;
+}
+const config = changes => post("/api/config", changes);
+const setIfIdle = (el, v) => { if (document.activeElement !== el && el.value !== String(v)) el.value = v; };
+const later = (el, fn, ms) => { clearTimeout(el._t); el._t = setTimeout(fn, ms || 250); };
+
+function build() {
+  $("crews").innerHTML = SIDES.map(side => `
+    <div class="crew" data-side="${side}">
+      <h3>${side === "left" ? "Left crew" : "Right crew"}</h3>
+      <div class="stocks"><button data-d="-1" title="Lost a stock">−</button><b class="n">12</b><button data-d="1" title="Give a stock back">+</button>
+        <div class="of"></div></div>
+      <label>On stage</label>
+      <div class="onstage"><button data-p="-1" title="Previous player">◀</button><span class="who"></span><button data-p="1" title="Next player">▶</button></div>
+      <label>Games won</label>
+      <div class="wins"><button data-w="-1">−</button><b class="w">0</b><button data-w="1">+</button></div>
+    </div>`).join("");
+  $("rosters").innerHTML = SIDES.map(side => `
+    <div class="crew" data-side="${side}">
+      <h3>${side === "left" ? "Left crew" : "Right crew"}</h3>
+      <label style="margin-top:0">Crew name</label><input data-k="name" spellcheck="false">
+      <label>Short name</label><input data-k="short" maxlength="8" spellcheck="false">
+      <label>Players</label><textarea data-k="players" spellcheck="false" placeholder="One player per line"></textarea>
+    </div>`).join("");
+  for (const box of document.querySelectorAll("#crews .crew")) {
+    const side = box.dataset.side;
+    for (const b of box.querySelectorAll("[data-d]")) b.onclick = () => post("/api/stocks", { side, delta: Number(b.dataset.d) });
+    for (const b of box.querySelectorAll("[data-p]")) b.onclick = () => post("/api/player", { side, delta: Number(b.dataset.p) });
+    for (const b of box.querySelectorAll("[data-w]")) b.onclick = () => post("/api/wins", { side, delta: Number(b.dataset.w) });
+  }
+  for (const box of document.querySelectorAll("#rosters .crew")) {
+    const side = box.dataset.side;
+    for (const el of box.querySelectorAll("[data-k]")) el.oninput = () => later(el, () => {
+      const v = el.dataset.k === "players" ? el.value.split("\n").map(s => s.trim()).filter(Boolean) : el.value;
+      config({ [side]: { [el.dataset.k]: v } });
+    }, 400);
+  }
+}
+
+function apply(s) {
+  const first = !state;
+  state = s;
+  const cfg = s.config, app = s.app, sb = s.scoreboard;
+  showUpdate(app.update);
+  if (first) build();
+  for (const box of document.querySelectorAll("#crews .crew")) {
+    const side = box.dataset.side, t = cfg[side], players = t.players.filter(Boolean);
+    box.querySelector(".n").textContent = cfg.crews[side];
+    box.querySelector(".of").textContent = `of ${cfg.crews.stocks} stocks`;
+    box.querySelector(".who").textContent = sb[side].name + (players.length ? `  (${Math.min(t.on_stage, players.length - 1) + 1}/${players.length})` : "");
+    box.querySelector(".w").textContent = t.wins || 0;
+  }
+  for (const box of document.querySelectorAll("#rosters .crew")) {
+    const t = cfg[box.dataset.side];
+    for (const el of box.querySelectorAll("[data-k]")) setIfIdle(el, el.dataset.k === "players" ? t.players.join("\n") : (t[el.dataset.k] || ""));
+  }
+  setIfIdle($("total"), cfg.crews.stocks);
+  setIfIdle($("per-game"), String(cfg.crews.per_game));
+  setIfIdle($("match"), cfg.match);
+  setIfIdle($("best-of"), String(cfg.best_of));
+  setIfIdle($("sponsor-seconds"), cfg.sponsor_seconds);
+  $("show-sponsors").checked = cfg.show.sponsors !== false;
+  $("notice").hidden = !app.notice;
+  $("notice").querySelector("span").textContent = app.notice || "";
+  for (const b of $("mode").children) b.classList.toggle("on", (b.dataset.mode === "demo") === app.demo);
+  // The stock reader.
+  const r = app.reader, boxes = cfg.reader.boxes;
+  $("reader").classList.toggle("reading", !!cfg.reader.on);
+  $("reader").textContent = cfg.reader.on ? "Reading the game — click to stop" : "Read the game";
+  $("reader-status").innerHTML = !cfg.reader.on ? (boxes.left && boxes.right ? "Off." : "Off. Draw both crews' boxes below first.")
+    : r.error ? `<span class="warn">${esc(r.error)}</span>`
+    : r.game.in_game ? "Reading: a game is on." : "Reading: waiting for a game (both crews' stock icons on screen).";
+  if (!$("counts").children.length) $("counts").innerHTML = SIDES.map(side => `<div><canvas class="zoom" data-side="${side}" width="240" height="60"></canvas>
+    ${side === "left" ? "Left" : "Right"} crew's player: <b class="c"></b> <span class="c2"></span></div>`).join("");
+  for (const [i, side] of SIDES.entries()) {
+    const el = $("counts").children[i], n = r.counts[side];
+    el.querySelector(".c").textContent = n == null ? "–" : n;
+    el.querySelector(".c2").textContent = n == null ? "(not seen yet)" : "stocks on screen";
+  }
+  zoom();
+  drawBoxes();
+  if (document.activeElement !== $("src-kind")) $("src-kind").value = cfg.reader.source.kind;
+  fillSources();
+  const live = cfg.reader.on && !r.error;
+  $("dot").className = "dot" + (live || app.demo ? " on" : "");
+  $("status").textContent = app.demo ? "Demo crew battle" : live ? (r.game.in_game ? "Reading · game on" : "Reading") : "Reader off";
+  // Sponsors.
+  const sp = cfg.sponsors.map((src, i) => `<div class="sponsor" style="background-image:url('${src}')"><span class="n">${i + 1}</span>
+    <div class="tools"><button data-sp="${i}" data-act="up">↑</button><button data-sp="${i}" data-act="del">✕</button></div></div>`).join("");
+  if ($("sponsors").dataset.html !== sp) {
+    $("sponsors").dataset.html = sp;
+    $("sponsors").innerHTML = sp;
+    for (const b of $("sponsors").querySelectorAll("button")) b.onclick = () => {
+      const list = state.config.sponsors.slice(), i = Number(b.dataset.sp);
+      if (b.dataset.act === "del") list.splice(i, 1); else if (i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
+      config({ sponsors: list });
+    };
+  }
+  // Outputs.
+  $("url-local").textContent = `http://localhost:${app.port}/scoreboard`;
+  $("lan-box").hidden = !app.lan_url;
+  if (app.lan_url) $("url-lan").textContent = app.lan_url + "/scoreboard";
+  if (document.activeElement !== $("network")) $("network").checked = app.network;
+}
+
+// --- the reader's source and boxes -------------------------------------------------
+async function loadSources() {
+  try { sources = await (await fetch("/api/reader/sources")).json(); } catch (e) { sources = null; }
+  if ($("src-pick").dataset.key) $("src-pick").dataset.key = "";
+  fillSources();
+}
+function fillSources() {
+  if (!state || !sources) return;
+  const src = state.config.reader.source, kind = $("src-kind").value;
+  let opts;
+  if (kind === "device") opts = sources.devices.length ? sources.devices.map(d => [d.index, d.label])
+    : [[src.index || 0, `Capture device ${(src.index || 0) + 1}` + (state.app.reader.opencv ? " (none found)" : " (needs the Windows app)")]];
+  else if (kind === "window") opts = (sources.windows.includes(src.window) || !src.window ? [] : [[src.window, src.window]]).concat(sources.windows.map(w => [w, w]));
+  else opts = sources.screens.map((l, i) => [i, l]);
+  const key = kind + JSON.stringify(opts);
+  if ($("src-pick").dataset.key !== key) {
+    $("src-pick").dataset.key = key;
+    $("src-pick").innerHTML = (kind === "window" && !src.window ? '<option value="">Pick a window…</option>' : "") +
+      opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("");
+  }
+  if (document.activeElement !== $("src-pick") && kind === src.kind)
+    $("src-pick").value = String(kind === "device" ? src.index : kind === "window" ? src.window : src.screen);
+}
+function setSource() {
+  const kind = $("src-kind").value, v = $("src-pick").value;
+  const source = { kind };
+  if (kind === "device") source.index = Number(v) || 0;
+  else if (kind === "window") source.window = v;
+  else source.screen = Number(v) || 0;
+  config({ reader: { source } });
+}
+$("src-kind").onchange = () => { fillSources(); setSource(); };
+$("src-pick").onchange = setSource;
+$("src-refresh").onclick = loadSources;
+
+async function grab() {
+  const img = $("frame-img");
+  try {
+    const r = await fetch(`/api/reader/frame?t=${Date.now()}`);
+    if (!r.ok) { $("frame-empty").hidden = false; $("frame-empty").textContent = "No picture: " + ((await r.json()).error || "nothing to read"); img.removeAttribute("src"); return; }
+    img.src = URL.createObjectURL(await r.blob());
+    $("frame-empty").hidden = true;
+  } catch (e) {}
+}
+$("grab").onclick = grab;
+let drawSide = "left";
+for (const b of $("draw-side").children) b.onclick = () => {
+  drawSide = b.dataset.side;
+  for (const x of $("draw-side").children) x.classList.toggle("on", x === b);
+};
+function drawBoxes(temp) {
+  const frame = $("frame");
+  for (const el of frame.querySelectorAll(".box")) el.remove();
+  const boxes = Object.assign({}, state.config.reader.boxes, temp || {}), n = state.config.crews.per_game;
+  for (const side of SIDES) {
+    const b = boxes[side];
+    if (!b) continue;
+    const el = document.createElement("div");
+    el.className = "box " + side;
+    Object.assign(el.style, { left: b[0] * 100 + "%", top: b[1] * 100 + "%", width: (b[2] - b[0]) * 100 + "%", height: (b[3] - b[1]) * 100 + "%" });
+    el.innerHTML = `<span>${side === "left" ? "Left" : "Right"} crew</span>` + Array.from({ length: n - 1 }, (_, i) => `<i style="left:${(i + 1) * 100 / n}%"></i>`).join("");
+    frame.appendChild(el);
+  }
+}
+// Each box, blown up under the picture, to check it's around the icons.
+function zoom() {
+  const img = $("frame-img");
+  for (const c of document.querySelectorAll("canvas.zoom")) {
+    const b = state.config.reader.boxes[c.dataset.side], g = c.getContext("2d");
+    g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height);
+    if (!b || !img.naturalWidth) continue;
+    const w = img.naturalWidth, h = img.naturalHeight;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(img, b[0] * w, b[1] * h, (b[2] - b[0]) * w, (b[3] - b[1]) * h, 0, 0, c.width, c.height);
+  }
+}
+$("frame-img").addEventListener("load", () => state && zoom());
+(function dragBoxes() {
+  const frame = $("frame");
+  let start = null;
+  const at = e => { const r = frame.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+  frame.addEventListener("pointerdown", e => { if (!$("frame-img").src) return; start = at(e); frame.setPointerCapture(e.pointerId); });
+  frame.addEventListener("pointermove", e => { if (start) { const p = at(e); drawBoxes({ [drawSide]: [Math.min(start[0], p[0]), Math.min(start[1], p[1]), Math.max(start[0], p[0]), Math.max(start[1], p[1])] }); } });
+  frame.addEventListener("pointerup", async e => {
+    if (!start) return;
+    const p = at(e), box = [start[0], start[1], p[0], p[1]];
+    start = null;
+    if (Math.abs(box[2] - box[0]) < 0.005 || Math.abs(box[3] - box[1]) < 0.005) { drawBoxes(); return; }
+    await post("/api/reader/box", { side: drawSide, box });
+    if (drawSide === "left") $("draw-side").children[1].click();
+  });
+})();
+
+// --- the rest of the controls ---------------------------------------------------------
+for (const b of $("mode").children) b.onclick = () => post("/api/demo", { on: b.dataset.mode === "demo" });
+$("reader").onclick = () => post("/api/reader", { on: !state.config.reader.on });
+$("reset").onclick = () => { if (confirm(`Start a new crew battle: both crews back to ${$("total").value} stocks?`)) post("/api/stocks", { reset: true, total: Number($("total").value) }); };
+$("per-game").onchange = e => post("/api/per-game", { value: Number(e.target.value) });
+$("notice-ok").onclick = () => post("/api/notice/clear");
+$("match").oninput = e => later(e.target, () => config({ match: e.target.value }));
+$("best-of").onchange = e => config({ best_of: Number(e.target.value) });
+$("sponsor-seconds").onchange = e => config({ sponsor_seconds: Number(e.target.value) || 8 });
+$("show-sponsors").onchange = e => config({ show: { sponsors: e.target.checked } });
+$("network").onchange = e => post("/api/network", { on: e.target.checked });
+for (const b of document.querySelectorAll("[data-copy]")) b.onclick = () => navigator.clipboard.writeText($(b.dataset.copy).textContent);
+function readFile(file) { return new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); }); }
+async function addSponsors(files) { for (const f of files) await post("/api/sponsor", { name: f.name, data: await readFile(f) }); }
+$("sponsor-drop").onclick = () => $("sponsor-file").click();
+$("sponsor-file").onchange = e => { addSponsors([...e.target.files]); e.target.value = ""; };
+$("sponsor-drop").ondragover = e => { e.preventDefault(); $("sponsor-drop").classList.add("over"); };
+$("sponsor-drop").ondragleave = () => $("sponsor-drop").classList.remove("over");
+$("sponsor-drop").ondrop = e => { e.preventDefault(); $("sponsor-drop").classList.remove("over"); addSponsors([...e.dataTransfer.files]); };
+// After "Use Global Information": the crews' names and players are new.
+window.onEngineGlobal = () => fetch("/api/state").then(r => r.json()).then(apply).catch(() => {});
+
+function fitPreview() { const p = $("preview"); p.querySelector("iframe").style.transform = `scale(${p.clientWidth / 1920})`; }
+addEventListener("resize", fitPreview);
+async function poll() {
+  try { apply(await (await fetch("/api/state")).json()); } catch (e) {}
+  setTimeout(poll, 1000);
+}
+async function pollLog() {
+  try {
+    const d = await (await fetch(`/api/log?after=${logAfter}`)).json(), box = $("log");
+    for (const l of d.lines) {
+      logAfter = l.id;
+      const div = document.createElement("div");
+      div.className = l.level;
+      div.innerHTML = `<span class="t">${l.time}</span>`;
+      div.appendChild(document.createTextNode(l.message));
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+  } catch (e) {}
+  setTimeout(pollLog, 1500);
+}
+// While reading, the picture keeps coming (on the Stock Reader page).
+setInterval(() => { if (state && state.config.reader.on && document.body.dataset.page === "reader" && !document.hidden) grab(); }, 1000);
+poll(); pollLog(); fitPreview(); loadSources();
+</script>
+</body>
+</html>

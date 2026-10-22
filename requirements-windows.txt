@@ -1,0 +1,6 @@
+# Desktop app extras (Windows). The HUD itself only needs Python's standard library.
+pywebview
+pillow
+# Reading the game: the capture card / virtual camera, and comparing stock icons.
+numpy
+opencv-python-headless
