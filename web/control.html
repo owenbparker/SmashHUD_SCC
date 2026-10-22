@@ -52,6 +52,7 @@
   input, select, textarea { width: 100%; padding: 8px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
   textarea { resize: vertical; min-height: 120px; }
   input[type=checkbox] { width: auto; }
+  input[type=range] { padding: 0; border: 0; background: none; accent-color: var(--accent); }
   button { padding: 8px 12px; background: #252a2f; color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; cursor: pointer; }
   button:hover { border-color: var(--muted); }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
@@ -189,6 +190,11 @@
         <button id="logo-clear">Use the Smash Class logo</button>
       </div>
     </div>
+    <label>Size <span id="logo-size-v" style="float:right;color:var(--text)"></span></label>
+    <input type="range" id="logo-size" min="30" max="250" step="5">
+    <label>Up / down <span id="logo-y-v" style="float:right;color:var(--text)"></span></label>
+    <input type="range" id="logo-y" min="-60" max="120" step="1">
+    <button id="logo-reset" style="margin-top:8px">Reset size and position</button>
     <input type="file" id="logo-file" accept="image/*" hidden>
     <p class="note">In the middle of the scoreboard. Drop a logo on the box, or choose one. GFX Engine's Use Global Information brings its tournament logo too.</p>
   </section>
@@ -340,6 +346,10 @@ function apply(s) {
   const logo = sb.logo || "assets/logo.png";
   if ($("logo-img").getAttribute("src") !== logo) $("logo-img").src = logo;
   $("logo-clear").disabled = !cfg.tournament_logo;
+  setIfIdle($("logo-size"), cfg.logo_size);
+  setIfIdle($("logo-y"), cfg.logo_y);
+  $("logo-size-v").textContent = $("logo-size").value + "%";
+  $("logo-y-v").textContent = (+$("logo-y").value > 0 ? "+" : "") + $("logo-y").value + " px";
   // Outputs.
   $("url-local").textContent = `http://localhost:${app.port}/scoreboard`;
   $("lan-box").hidden = !app.lan_url;
@@ -457,6 +467,11 @@ async function setLogo(file) { if (file) post("/api/logo", { name: file.name, da
 $("logo-pick").onclick = $("logo-box").onclick = () => $("logo-file").click();
 $("logo-file").onchange = e => { setLogo(e.target.files[0]); e.target.value = ""; };
 $("logo-clear").onclick = () => post("/api/logo", {});
+for (const [id, key, unit] of [["logo-size", "logo_size", "%"], ["logo-y", "logo_y", " px"]]) $(id).oninput = e => {
+  $(id + "-v").textContent = (key === "logo_y" && +e.target.value > 0 ? "+" : "") + e.target.value + unit;
+  later(e.target, () => config({ [key]: Number(e.target.value) }), 120);
+};
+$("logo-reset").onclick = () => config({ logo_size: 100, logo_y: 0 });
 $("logo-box").ondragover = e => { e.preventDefault(); $("logo-box").classList.add("over"); };
 $("logo-box").ondragleave = () => $("logo-box").classList.remove("over");
 $("logo-box").ondrop = e => { e.preventDefault(); $("logo-box").classList.remove("over"); setLogo(e.dataTransfer.files[0]); };

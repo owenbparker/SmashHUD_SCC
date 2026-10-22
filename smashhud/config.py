@@ -35,6 +35,9 @@ DEFAULTS = {
     "match": "Grand Finals",
     # The logo in the middle of the scoreboard ("logos/x.png"); none shows the Smash Class logo.
     "tournament_logo": "",
+    # Its size (percent of the design's logo box) and how far it's moved up or down (pixels).
+    "logo_size": 100,
+    "logo_y": 0,
     # Sponsor logos in the box at the bottom, in turn, each for this many seconds.
     "sponsors": [],
     "sponsor_seconds": 8,

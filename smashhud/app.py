@@ -157,6 +157,7 @@ class HudApp:
         cfg = self.config.get()
         out = {"match": cfg["match"], "best_of": int(cfg["best_of"]), "sponsors": cfg["sponsors"],
                "logo": cfg["tournament_logo"] or "assets/logo.png",
+               "logo_size": cfg["logo_size"], "logo_y": cfg["logo_y"],
                "sponsor_seconds": cfg["sponsor_seconds"], "show": cfg["show"], "stocks": cfg["crews"]["stocks"]}
         for side in SIDES:
             t = cfg[side]
