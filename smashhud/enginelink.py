@@ -7,7 +7,7 @@ original, in hud-link/). A HUD makes one EngineLink with:
 
     source        its name on the engine, e.g. "League HUD" (the engine's data
                   table of its fields has this name)
-    game          "lol", "valorant", "cod" or "rl"
+    game          "lol", "valorant", "cod", "rl" or "smash"
     snapshot()    -> {"fields": {name: value}, "series": {"left": {"name",
                   "short", "score", "color"}, "right": {...}, "best_of": n},
                   and optionally "hud": {"port", "network" (other PCs can
