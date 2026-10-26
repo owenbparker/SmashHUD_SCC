@@ -189,6 +189,11 @@ class AppTest(unittest.TestCase):
         self.assertEqual((sb["left"]["stocks"], sb["left"]["name"], sb["right"]["name"]), (9, "Bravo", "PLAYER 2"))
         self.app.on_reader([("lost", "left", 20)])
         self.assertEqual(self.app.scoreboard()["left"]["stocks"], 0)
+        # Swap sides: the crew, who's on stage and its stocks go with it.
+        s = self.post("/api/swap", {})
+        self.assertEqual((s["scoreboard"]["right"]["name"], s["scoreboard"]["right"]["stocks"]), ("Bravo", 0))
+        self.assertEqual((s["scoreboard"]["left"]["name"], s["scoreboard"]["left"]["stocks"]), ("PLAYER 2", 11))
+        self.post("/api/swap", {})
 
     def test_tournament_logo(self):
         import base64

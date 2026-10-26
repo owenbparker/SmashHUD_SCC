@@ -94,6 +94,18 @@ class HudApp:
         log(f"New crew battle: {total} stocks each")
         self.changed()
 
+    def swap_sides(self):
+        """The crews change sides: their names, colours, players, who's on
+        stage, games won and stocks left."""
+        with self._lock:
+            cfg = self.config.get()
+            c = cfg["crews"]
+            self.config.update({"left": cfg["right"], "right": cfg["left"],
+                                "crews": {"left": c["right"], "right": c["left"]}})
+            self.flash = {"left": self.flash["right"], "right": self.flash["left"]}
+        log(f"Sides swapped: {cfg['right']['name'] or 'right crew'} on the left")
+        self.changed()
+
     def next_player(self, side, how="manual", step=1):
         cfg = self.config.get()[side]
         players = [p for p in cfg["players"] if p.strip()]
@@ -417,6 +429,8 @@ def make_handler(app):
                         app.set_stocks(side, body["value"])
                     else:
                         app.lose(side, -int(body.get("delta") or 0))
+                elif path == "/api/swap":
+                    app.swap_sides()
                 elif path == "/api/per-game":
                     app.config.update({"crews": {"per_game": max(1, min(5, int(body.get("value") or 3)))}})
                     app.reader.apply()

@@ -47,6 +47,9 @@
   main { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; padding: 16px; align-content: start; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
   section.wide { grid-column: 1 / -1; }
+  .h2row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .h2row h2 { margin: 0; }
+  .h2row button { flex: 0 0 auto; padding: 6px 14px; }
   h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   label { display: block; margin: 10px 0 4px; color: var(--muted); font-size: 12px; }
   input, select, textarea { width: 100%; padding: 8px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
@@ -152,7 +155,7 @@
       <option value="7">Best of 7</option></select>
   </section>
   <section data-page="teams" class="wide">
-    <h2>Crews</h2>
+    <div class="h2row"><h2>Crews</h2><button id="swap-sides" title="The crews change sides: names, players, who's on stage, games won and stocks left">⇄ Swap sides</button></div>
     <div class="crews" id="rosters"></div>
     <p class="note">One player per line, in the order they play. The scoreboard shows the player on stage (or the crew's name while there are no players), and the next one comes up when the stock reader sees a player knocked out.</p>
   </section>
@@ -249,6 +252,8 @@ async function post(url, body) {
 const config = changes => post("/api/config", changes);
 const setIfIdle = (el, v) => { if (document.activeElement !== el && el.value !== String(v)) el.value = v; };
 const later = (el, fn, ms) => { clearTimeout(el._t); el._t = setTimeout(fn, ms || 250); };
+
+$("swap-sides").onclick = () => post("/api/swap", {});
 
 function build() {
   $("crews").innerHTML = SIDES.map(side => `
