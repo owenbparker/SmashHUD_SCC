@@ -18,6 +18,7 @@
   .board { position: absolute; inset: 0; transform: translateY(-140px); transition: transform .55s cubic-bezier(.2,.9,.3,1); }
   .board.in { transform: none; }
   .abs { position: absolute; white-space: nowrap; }
+  .name, .line { overflow-x: clip; overflow-clip-margin: 0; }
   #bg { left: 286px; top: 0; width: 1350px; height: 127px; }
   #logo { left: 880px; top: 1px; width: 162px; height: 127px; z-index: 3; object-fit: contain; transform-origin: 50% 50%; }
   .score { top: 0; width: 88px; height: 74px; display: grid; place-items: center; font: 62.5px/1 "Anton", sans-serif;
@@ -67,11 +68,18 @@ let last = null, flash = { left: null, right: null };
 function fit(el, text, room, force) {
   const key = text + "|" + Math.round(room);
   if (el.dataset.key === key && !force) return;
-  el.dataset.key = key;
-  el.textContent = text;
+  // Each text has a box as wide as its room (nothing past it shows), and
+  // shrinks until it fits in it.
+  el.style.width = Math.max(0, room) + "px";
+  let span = el.firstElementChild;
+  if (!span) { el.textContent = ""; span = el.appendChild(document.createElement("span")); }
+  span.textContent = text;
   const size = SIZES[el.id] || (SIZES[el.id] = parseFloat(getComputedStyle(el).fontSize));
   el.style.fontSize = size + "px";
-  const w = el.scrollWidth;
+  const w = span.offsetWidth;
+  // (not laid out yet, e.g. a preview that's hidden: try again later)
+  if (!w && text) { delete el.dataset.key; return; }
+  el.dataset.key = key;
   if (w > room) el.style.fontSize = (size * room / w) + "px";
 }
 
@@ -155,6 +163,11 @@ function connect() {
 document.fonts.ready.then(connect);
 // (a font that arrives later, Brick from the PC say, is wider or narrower: fit again)
 document.fonts.addEventListener("loadingdone", () => last && fitAll(last, true));
+// (and again whenever it's shown or resized, and now and then, in case the fonts were still on their way)
+addEventListener("resize", () => last && fitAll(last, true));
+document.addEventListener("visibilitychange", () => last && fitAll(last, true));
+setInterval(() => last && fitAll(last), 1000);
+setInterval(() => last && fitAll(last, true), 5000);
 </script>
 </body>
 </html>
