@@ -45,7 +45,8 @@ class HudApp:
         # The SCC GFX Engine: the crews' score and series go to it; its teams can come here.
         self.engine = EngineLink("Smash HUD", "smash", self._engine_snapshot, self._engine_apply_global,
                                  load=lambda: self.config.get().get("gfx_engine"),
-                                 save=lambda d: self.config.update({"gfx_engine": d}), log=log)
+                                 save=lambda d: self.config.update({"gfx_engine": d}), log=log,
+                                 swap=lambda: self.swap_sides(engine=False))
         if demo:
             self.set_demo(True)
 
@@ -94,7 +95,7 @@ class HudApp:
         log(f"New crew battle: {total} stocks each")
         self.changed()
 
-    def swap_sides(self):
+    def swap_sides(self, engine=True):
         """The crews change sides: their names, colours, players, who's on
         stage, games won and stocks left."""
         with self._lock:
@@ -105,6 +106,8 @@ class HudApp:
             self.flash = {"left": self.flash["right"], "right": self.flash["left"]}
         log(f"Sides swapped: {cfg['right']['name'] or 'right crew'} on the left")
         self.changed()
+        if engine:   # (connected: the GFX Engine's Global teams swap too, as the HUD follows them)
+            self.engine.swap_global()
 
     def next_player(self, side, how="manual", step=1):
         cfg = self.config.get()[side]
