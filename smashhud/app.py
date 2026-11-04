@@ -224,6 +224,8 @@ class HudApp:
             if rosters.get(side):
                 team["players"] = rosters[side]
                 team["on_stage"] = 0
+            if str(t.get("score", "")).isdigit():   # (the series score: Global's is the one shown)
+                team["wins"] = int(t["score"])
             if team:
                 changes[side] = team
                 done.append(f"{side}: {team.get('name') or team.get('short')}"
