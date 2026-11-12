@@ -14,7 +14,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import capture
+from . import appearance, capture
 from .config import DATA_DIR, LOGO_DIR, SPONSOR_DIR, web_file
 from .crews import SIDES
 from .enginelink import EngineLink, save_logo_bytes, save_sponsors
@@ -376,6 +376,8 @@ def make_handler(app):
         def do_GET(self):
             url = urlparse(self.path)
             path = url.path
+            if appearance.handle(self, "GET", path, DATA_DIR):
+                return
             if path in PAGES:
                 target = PAGES[path]
                 if target.startswith("/"):
@@ -408,6 +410,8 @@ def make_handler(app):
 
         def do_POST(self):
             path = urlparse(self.path).path
+            if appearance.handle(self, "POST", path, DATA_DIR):
+                return
             if not _is_local(self.client_address[0]):
                 return self._json({"error": "settings can only be changed on the HUD's own PC"}, 403)
             try:

@@ -10,3 +10,4 @@ overlay-test*
 _update/
 build/
 dist/
+appearance.json
