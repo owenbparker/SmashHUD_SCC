@@ -272,16 +272,17 @@ class HudApp:
         snap = self._engine_snapshot()
         cfg = self.config.get()
         series = snap.get("series") or {}
+        match = cfg.get("match") if isinstance(cfg.get("match"), dict) else {}   # (Smash's "match" is the stage's text)
         for side in ("left", "right"):
-            team = cfg.get(side) if isinstance(cfg.get(side), dict) else (cfg.get("match") or {}).get(side) or {}
+            team = cfg.get(side) if isinstance(cfg.get(side), dict) else match.get(side) or {}
             # (the HUD's own team when the snapshot leaves the series out, e.g. while it follows the GFX Engine)
             own = {"name": team.get("name") or "", "short": team.get("tricode") or team.get("short") or "",
                    "score": team.get("wins") or 0, "color": team.get("color") or "", "logo": team.get("logo") or ""}
             series[side] = dict(own, **{k: v for k, v in (series.get(side) or {}).items() if v not in (None, "")})
-        series.setdefault("best_of", (cfg.get("match") or {}).get("best_of") or cfg.get("best_of") or 3)
+        series.setdefault("best_of", match.get("best_of") or cfg.get("best_of") or 3)
         snap["series"] = series
         snap.setdefault("event", cfg.get("event") or "")
-        snap.setdefault("stage", cfg.get("stage") or "")
+        snap.setdefault("stage", cfg.get("stage") or (cfg.get("match") if isinstance(cfg.get("match"), str) else ""))
         return snap
 
     def stop(self):
