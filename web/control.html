@@ -131,6 +131,7 @@
     <button data-mode="live">Live</button><button data-mode="demo">Demo crew battle</button>
   </div>
   <div class="status" style="margin-left:auto">
+    <button id="custom-design" title="Design your own HUD on this HUD's live data, or bring in a Photoshop, Figma or GFX Engine design (HUD Builder, built in)">Custom design</button>
     <button id="update" class="update" hidden></button>
     <span class="version" id="version"></span>
   </div>
@@ -515,6 +516,14 @@ async function pollLog() {
 // While reading, the picture keeps coming (on the Stock Reader page).
 setInterval(() => { if (state && state.config.reader.on && document.body.dataset.page === "reader" && !document.hidden) grab(); }, 1000);
 poll(); pollLog(); fitPreview(); loadSources();
+</script>
+<script>
+// Custom design: HUD Builder, built in, in its own window.
+document.getElementById("custom-design").addEventListener("click", async () => {
+  const r = await fetch("/api/custom-design", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const d = await r.json().catch(() => ({}));
+  if (d.error) alert(d.error);
+});
 </script>
 </body>
 </html>

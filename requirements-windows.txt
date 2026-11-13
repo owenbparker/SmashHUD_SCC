@@ -4,3 +4,7 @@ pillow
 # Reading the game: the capture card / virtual camera, and comparing stock icons.
 numpy
 opencv-python-headless
+# Custom design (HUD Builder): Photoshop files
+psd-tools
+# Custom design (HUD Builder): Figma files
+zstandard
