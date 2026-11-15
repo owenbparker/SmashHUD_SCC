@@ -79,3 +79,7 @@ the engine's team names, their players (from its team list) and sponsors.
     python -m smashhud.gui          # the desktop app
     python -m smashhud --demo       # the HUD alone, with a made-up crew battle
     python -m unittest discover -s tests
+
+## Releases
+
+Normal releases (the ones installed apps update to) are built from the `main` branch. Work branches publish test builds (GitHub pre-releases) that installed apps never pick up.
